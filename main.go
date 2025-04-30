@@ -116,17 +116,23 @@ func processArgs(c *cli.Context) (result string) {
 	a2 := c.Args().Get(1)
 	var a3 string
 	if c.Args().Len() == 2 {
-		a3 = "d"
+		a3 = ""
 	} else {
 		a3 = c.Args().Get(2)
 	}
 
 	df, fu := parseSize(a1)
+	if df == 0 {
+		log.Fatal("Invalid size format: ", a1)
+	}
 	if fu == SU_UNKNOWN {
 		fu = SU_Default1
 	}
 
 	sf, su := parseSize(a2)
+	if sf == 0 {
+		log.Fatal("Invalid size format: ", a2)
+	}
 	if su == SU_UNKNOWN {
 		su = SU_Default2
 	}
