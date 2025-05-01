@@ -108,6 +108,7 @@ func main() {
 	}
 }
 
+// The main brain. This function turns args into the output string
 func processArgs(c *cli.Context) (result string) {
 	if err := checkArgNumber(c); err != nil {
 		log.Fatal(err)
@@ -123,7 +124,7 @@ func processArgs(c *cli.Context) (result string) {
 
 	df, fu := parseSize(a1)
 	if df == 0 {
-		log.Fatal("Invalid size format: ", a1)
+		log.Fatal("Invalid size format: ", a1g)
 	}
 	if fu == SU_UNKNOWN {
 		fu = SU_Default1
