@@ -210,6 +210,7 @@ func reduceTime(u uint8) (n uint64) {
 	}
 }
 
+// Uses TUR to reduce a TU to a second-based u
 func reduceTimeFloat(u uint8) (f float32) {
 	f = 1
 	if value, ok := TUR[u]; ok {
