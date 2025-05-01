@@ -92,10 +92,53 @@ const (
 	ErrArgOverflow     string = "Howlong: Arg Validation Error: More than enough Arguments provided, heh"
 )
 
+const (
+	Version = "v0.1.1"
+)
+
 func main() {
+	cli.VersionPrinter = func(cCtx *cli.Context) {
+		fmt.Printf("%s\n", cCtx.App.Version)
+	}
+
+	cli.AppHelpTemplate = `NAME:
+   {{.Name}} - {{.Usage}}
+
+USAGE:
+   {{.HelpName}} {{if .VisibleFlags}}[global options]{{end}} {{if .ArgsUsage}}{{.ArgsUsage}}{{else}}[arguments...]{{end}}
+   {{if len .Authors}}
+AUTHOR:
+   {{range .Authors}}{{ . }}{{end}}
+   {{end}}{{if .Commands}}
+GLOBAL OPTIONS:
+   {{range .VisibleFlags}}{{.}}
+   {{end}}{{end}}{{if .Copyright }}
+COPYRIGHT:
+   {{.Copyright}}
+   {{end}}{{if .Version}}
+VERSION:
+   {{.Version}}
+   {{end}}
+`
+
+	cli.HelpFlag = &cli.BoolFlag{
+		Name:               "help",
+		Aliases:            []string{"h"},
+		Usage:              "Show this help text",
+		DisableDefaultText: true,
+	}
+
 	app := &cli.App{
-		Name:  "howlong",
-		Usage: "Never estimate download time ever again!",
+		Name:    "howlong",
+		Version: Version,
+		Suggest: true,
+		Authors: []*cli.Author{
+			{
+				Name: "Fuzzycc@github",
+			},
+		},
+		Usage:     "Never estimate download time ever again!",
+		ArgsUsage: "{size[unit]} {speed[unit]} [time-unit]",
 		Action: func(c *cli.Context) error {
 			r := processArgs(c)
 			fmt.Printf("%v", r)
@@ -124,7 +167,7 @@ func processArgs(c *cli.Context) (result string) {
 
 	df, fu := parseSize(a1)
 	if df == 0 {
-		log.Fatal("Invalid size format: ", a1g)
+		log.Fatal("Invalid size format: ", a1)
 	}
 	if fu == SU_UNKNOWN {
 		fu = SU_Default1
@@ -148,10 +191,10 @@ func processArgs(c *cli.Context) (result string) {
 	sb := reduceSize(sf, su)
 
 	total := db / sb
-	result = strconv.FormatUint(total / reduceTime(tu), 10)
+	result = strconv.FormatUint(total/reduceTime(tu), 10)
 	// fmt.Println(result == 0, result)
 	if result == "0" {
-		result = strconv.FormatFloat(float64(float32(total) / reduceTimeFloat(tu)), 'f', 2, 64)
+		result = strconv.FormatFloat(float64(float32(total)/reduceTimeFloat(tu)), 'f', 2, 64)
 	}
 
 	return result
@@ -167,7 +210,7 @@ func reduceTime(u uint8) (n uint64) {
 	}
 }
 
-func reduceTimeFloat(u uint8) (f float32){
+func reduceTimeFloat(u uint8) (f float32) {
 	f = 1
 	if value, ok := TUR[u]; ok {
 		f = (float32(value))
