@@ -199,7 +199,7 @@ func processArgs(c *cli.Context) (result string) {
 
 	return result
 }
-
+// Uses TUR to reduce a TU to a second-based u uint64
 func reduceTime(u uint8) (n uint64) {
 	n = 1
 	if value, ok := TUR[u]; ok {
@@ -210,7 +210,7 @@ func reduceTime(u uint8) (n uint64) {
 	}
 }
 
-// Uses TUR to reduce a TU to a second-based u
+// Uses TUR to reduce a TU to a second-based u float
 func reduceTimeFloat(u uint8) (f float32) {
 	f = 1
 	if value, ok := TUR[u]; ok {
