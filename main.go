@@ -362,7 +362,6 @@ func processArgs(c *cli.Context) (result string) {
 
 	return result
 }
-
 // Uses TUR to reduce a TU to a second-based u uint64
 func reduceTime(u uint8) (n uint64) {
 	n = 1
