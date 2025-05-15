@@ -15,6 +15,21 @@ The complete command takes a size string composed of a number and a unit, 30GB f
 
 The command then returns the Estimated Time to Download or ETD.
 
+# Continuous Mode
+Continuous mode is started with the `--continuous` or `-c` flag and supplied with `{unit} {unit} {time-unit}`
+Then, input is taken in the form of `{down-size} {speed}` and an output is given in the form of `duration` concatted with `time-unit`
+
+## Example
+```
+$hl -c GB KB h
+>10 420 
+6.9350h
+>10 369
+7.8933h
+-1
+```
+The program will output -1 when terminated.
+
 # Help
 hl {down-size[unit]} {speed[unit]} [time-unit]
 
