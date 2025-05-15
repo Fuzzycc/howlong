@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"math"
 	"os"
@@ -116,7 +117,7 @@ const (
 )
 
 const (
-	Version = "v0.5.0"
+	Version = "v0.5.5"
 )
 
 func main() {
@@ -190,6 +191,7 @@ func wrapperContinuous(ctx *cli.Context) {
 	sigs := make(chan os.Signal, 1)
 	defer close(sigs)
 
+	q := make(chan bool, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
 	input := make(chan string, 1)
@@ -197,30 +199,83 @@ func wrapperContinuous(ctx *cli.Context) {
 
 	var fu, su, tu uint8 = processArgsContinuous(ctx)
 
-	scanner := bufio.NewScanner(os.Stdin)
+	scanner := bufio.NewReader(os.Stdin)
 
+	// go func() {
+	// 	for {
+	// 		select {
+	// 		case sig := <- sigs:
+	// 			fmt.Println("---", sig, "---")
+	// 			return
+	// 			case
+	// 		}
+	// 	}
+	// }()
+
+	// for {
+	// 	in := readInput(scanner)
+	// 	in = processInput(in, fu, su, tu)
+	// 	input <- in
+
+	// 	go func() {
+	// 		select {
+	// 		case sig := <-sigs:
+	// 			fmt.Println()
+	// 			fmt.Println("---", sig, "---")
+	// 			return
+	// 		case str := <-input:
+	// 			fmt.Println(str + I_TU[tu])
+	// 		}
+	// 	}()
+	// }
+
+	go func() {
+		<-sigs
+		fmt.Println("-1")
+		close(q)
+	}()
+
+loop:
 	for {
-		select {
-		case sig := <-sigs:
-			fmt.Println()
-			fmt.Println("---", sig, "---")
-			// done <- true
-			return
-		case str := <-input:
-			fmt.Println(str + I_TU[tu])
-		// parse the string into 2 numbers
-		// run the calculation
-		// print the result with a time unit added
-		default:
-			// Input
-			in := readInput(scanner)
-			// process
-			in = processInput(in, fu, su, tu)
-
-			// send to input channel
-			input <- in // blocking, which is what I want
+		in := readInput(scanner)
+		if in == "" {
+			break loop
 		}
+		in = processInput(in, fu, su, tu)
+		fmt.Println(in + I_TU[tu])
 	}
+	select {
+	case <-q:
+	}
+
+	// in := readInput(scanner)
+	// in = processInput(in, fu, su, tu)
+	// input <- in
+	// for {
+	// 	select {
+	// 	case sig := <-sigs:
+	// 		fmt.Println()
+	// 		fmt.Println("---", sig, "---")
+	// 		// done <- true
+	// 		return
+	// 	case str := <-input:
+	// 		fmt.Println(str + I_TU[tu])
+	// 		// parse the string into 2 numbers
+	// 		// run the calculation
+	// 		// print the result with a time unit added
+	// 		// default:
+	// 		// 	// Input
+	// 		// 	in := readInput(scanner)
+	// 		// 	// process
+	// 		// 	in = processInput(in, fu, su, tu)
+
+	// 		// 	// send to input channel
+	// 		// 	input <- in // blocking, which is what I want
+	// 	}
+	// 	in := readInput(scanner)
+	// 	in = processInput(in, fu, su, tu)
+	// 	input <- in
+	// }
 }
 
 // func readInputC(r io.Reader, line chan string) {
@@ -229,9 +284,18 @@ func wrapperContinuous(ctx *cli.Context) {
 // 	go func() {}
 // }
 
-func readInput(scanner *bufio.Scanner) (s string) {
-	scanner.Scan()
-	return scanner.Text()
+func readInput(scanner *bufio.Reader) (s string) {
+	s, err := scanner.ReadString('\n')
+	if err == io.EOF {
+		return ""
+	}
+	if err != nil {
+		log.Fatal(err)
+	}
+	s = strings.TrimRight(s, "\r\n")
+	// fmt.Println("-", s, "-")
+	return s
+	// return scanner.Text()
 }
 
 func processInput(in string, fu uint8, su uint8, tu uint8) (result string) {
@@ -239,9 +303,10 @@ func processInput(in string, fu uint8, su uint8, tu uint8) (result string) {
 	err := func() error {
 		plen := len(parts)
 		switch plen {
-		case 0:
+		case 0: // this never happens, len is always minimum of 1, read strings.Split
 			return errors.New("Howlong: Input Validation Error: 0 input, 2 required")
 		case 1:
+			fmt.Println(parts)
 			return errors.New("Howlong: Input Validation Error: 1 input, 2 required")
 		case 2:
 			return nil
@@ -265,11 +330,8 @@ func processInput(in string, fu uint8, su uint8, tu uint8) (result string) {
 	sb := reduceSize(sf, su)
 
 	total := db / sb
-	result = strconv.FormatUint(total/reduceTime(tu), 10)
-	// fmt.Println(result == 0, result)
-	if result == "0" {
-		result = strconv.FormatFloat(float64(float32(total)/reduceTimeFloat(tu)), 'f', 4, 64)
-	}
+
+	result = strconv.FormatFloat(float64(float32(total)/reduceTimeFloat(tu)), 'f', 4, 64)
 
 	return result
 }
@@ -349,11 +411,14 @@ func processArgs(c *cli.Context) (result string) {
 	sb := reduceSize(sf, su)
 
 	total := db / sb
-	result = strconv.FormatUint(total/reduceTime(tu), 10)
-	// fmt.Println(result == 0, result)
-	if result == "0" {
-		result = strconv.FormatFloat(float64(float32(total)/reduceTimeFloat(tu)), 'f', 4, 64)
-	}
+	// result = strconv.FormatUint(total/reduceTime(tu), 10)
+	// // fmt.Println(result == 0, result)
+	// if result == "0" {
+	// 	result = strconv.FormatFloat(float64(float32(total)/reduceTimeFloat(tu)), 'f', 4, 64)
+	// }
+
+	// all float, its better
+	result = strconv.FormatFloat(float64(float32(total)/reduceTimeFloat(tu)), 'f', 4, 64)
 
 	return result
 }
