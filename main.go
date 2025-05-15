@@ -1,13 +1,16 @@
 package main
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
 	"log"
 	"math"
 	"os"
+	"os/signal"
 	"strconv"
 	"strings"
+	"syscall"
 
 	"github.com/urfave/cli/v2"
 )
@@ -61,6 +64,26 @@ var (
 		"m": TU_m,
 		"h": TU_h,
 		"d": TU_d,
+	}
+
+	// Inverse of SU, mapping uint8 to string
+	I_SU map[uint8]string = map[uint8]string{
+		SU_b:  "b",
+		SU_B:  "B",
+		SU_Kb: "Kb",
+		SU_KB: "KB",
+		SU_Mb: "Mb",
+		SU_MB: "MB",
+		SU_Gb: "Gb",
+		SU_GB: "GB",
+	}
+
+	// Inverse of TU, mapping uint8 to string
+	I_TU map[uint8]string = map[uint8]string{
+		TU_s: "s",
+		TU_m: "m",
+		TU_h: "h",
+		TU_d: "d",
 	}
 
 	// 8 589 934 592 = 1GB in bits
@@ -129,6 +152,13 @@ VERSION:
 	}
 
 	app := &cli.App{
+		Flags: []cli.Flag{
+			&cli.BoolFlag{
+				Name:    "continuous",
+				Aliases: []string{"c"},
+				Usage:   "Enter continuous mode with the provided `SIZEUNIT SPEEDUNIT TIMEUNIT`",
+			},
+		},
 		Name:    "howlong",
 		Version: Version,
 		Suggest: true,
@@ -139,16 +169,149 @@ VERSION:
 		},
 		Usage:     "Never estimate download time ever again!",
 		ArgsUsage: "{size[unit]} {speed[unit]} [time-unit]",
-		Action: func(c *cli.Context) error {
-			r := processArgs(c)
-			fmt.Printf("%v", r)
-			return nil
+		Action: func(ctx *cli.Context) error {
+			if ctx.Bool("continuous") {
+				wrapperContinuous(ctx)
+				return nil
+			} else {
+				r := processArgs(ctx)
+				fmt.Printf("%v", r)
+				return nil
+			}
 		},
 	}
 
 	if err := app.Run(os.Args); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func wrapperContinuous(ctx *cli.Context) {
+	sigs := make(chan os.Signal, 1)
+	defer close(sigs)
+
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGKILL)
+
+	// done := make(chan bool, 1)
+	// defer close(done)
+
+	input := make(chan string, 1)
+	defer close(input)
+
+	// TODO:
+	// [x] Initialize units from args -> [processArgsContinuous]
+	// - Read input
+	// - Process input
+	// - pipe input to goroutine handler
+	// - print receieved result
+
+	var fu, su, tu uint8 = processArgsContinuous(ctx)
+
+	scanner := bufio.NewScanner(os.Stdin)
+
+	for i := 0; i < 999888777; i++ {
+		select {
+		case sig := <-sigs:
+			fmt.Println()
+			fmt.Println("---", sig, "---")
+			// done <- true
+			return
+		case str := <-input:
+			fmt.Println(str)
+			// parse the string into 2 numbers
+			// run the calculation
+			// print the result with a time unit added
+		default:
+			// Input
+			in := readInput(scanner)
+			// validate
+			in = processInput(in, fu, su, tu)
+
+			// send to input channel
+			input <- in // blocking, which is what I want
+			i++
+		}
+	}
+}
+
+func readInput(scanner *bufio.Scanner) (s string) {
+	scanner.Scan()
+	return scanner.Text()
+}
+
+func processInput(in string, fu uint8, su uint8, tu uint8) (result string) {
+	parts := strings.Split(in, " ")
+	err := func() error {
+		plen := len(parts)
+		switch plen {
+		case 0:
+			return errors.New("Howlong: Input Validation Error: 0 input, 2 required")
+		case 1:
+			return errors.New("Howlong: Input Validation Error: 1 input, 2 required")
+		case 2:
+			return nil
+		case 3:
+			return errors.New("Howlong: Input Validation Error: >2 input, 2 required")
+		default:
+			return errors.New("Howlong: Input Validation Error: Invalid Input")
+		}
+	}()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	a1 := parts[0] + I_SU[fu]
+	a2 := parts[1] + I_SU[su]
+
+	df, _ := parseSize(a1)
+	sf, _ := parseSize(a2)
+
+	db := reduceSize(df, fu)
+	sb := reduceSize(sf, su)
+
+	total := db / sb
+	result = strconv.FormatUint(total/reduceTime(tu), 10)
+	// fmt.Println(result == 0, result)
+	if result == "0" {
+		result = strconv.FormatFloat(float64(float32(total)/reduceTimeFloat(tu)), 'f', 4, 64)
+	}
+
+	return result
+}
+
+func processArgsContinuous(c *cli.Context) (fu uint8, su uint8, tu uint8) {
+	// Init units from args
+	// 2 or 3 arguments
+	if err := checkArgNumber(c); err != nil {
+		log.Fatal(err)
+	}
+	a1 := c.Args().First()
+	a2 := c.Args().Get(1)
+	var a3 string
+	if c.Args().Len() == 2 {
+		a3 = ""
+	} else {
+		a3 = c.Args().Get(2)
+	}
+
+	a1 = "10" + a1
+	_, fu = parseSize(a1)
+	if fu == SU_UNKNOWN {
+		fu = SU_Default1
+	}
+
+	a2 = "10" + a2
+	_, su = parseSize(a2)
+	if su == SU_UNKNOWN {
+		su = SU_Default2
+	}
+
+	tu = parseTime(a3)
+	if tu == TU_UNKNOWN {
+		tu = TU_Default
+	}
+
+	return fu, su, tu
 }
 
 // The main brain. This function turns args into the output string
@@ -194,12 +357,13 @@ func processArgs(c *cli.Context) (result string) {
 	result = strconv.FormatUint(total/reduceTime(tu), 10)
 	// fmt.Println(result == 0, result)
 	if result == "0" {
-		result = strconv.FormatFloat(float64(float32(total)/reduceTimeFloat(tu)), 'f', 2, 64)
+		result = strconv.FormatFloat(float64(float32(total)/reduceTimeFloat(tu)), 'f', 4, 64)
 	}
 
 	return result
 }
 
+// Uses TUR to reduce a TU to a second-based u uint64
 func reduceTime(u uint8) (n uint64) {
 	n = 1
 	if value, ok := TUR[u]; ok {
@@ -210,7 +374,7 @@ func reduceTime(u uint8) (n uint64) {
 	}
 }
 
-// Uses TUR to reduce a TU to a second-based u
+// Uses TUR to reduce a TU to a second-based u float
 func reduceTimeFloat(u uint8) (f float32) {
 	f = 1
 	if value, ok := TUR[u]; ok {
@@ -271,7 +435,9 @@ func checkArgNumber(c *cli.Context) error {
 }
 
 // Parse a valid s into n and u
+//
 // If s is invalid, returns n = 0 and u = [SU_UNKNOWN]
+//
 // if s is valid but lacks u, returns n and u = [SU_UNKNOWN]
 func parseSize(s string) (n float32, u uint8) {
 	u = SU_UNKNOWN
