@@ -116,7 +116,7 @@ const (
 )
 
 const (
-	Version = "v0.1.1"
+	Version = "v0.5.0"
 )
 
 func main() {
@@ -190,26 +190,16 @@ func wrapperContinuous(ctx *cli.Context) {
 	sigs := make(chan os.Signal, 1)
 	defer close(sigs)
 
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGKILL)
-
-	// done := make(chan bool, 1)
-	// defer close(done)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
 	input := make(chan string, 1)
 	defer close(input)
-
-	// TODO:
-	// [x] Initialize units from args -> [processArgsContinuous]
-	// - Read input
-	// - Process input
-	// - pipe input to goroutine handler
-	// - print receieved result
 
 	var fu, su, tu uint8 = processArgsContinuous(ctx)
 
 	scanner := bufio.NewScanner(os.Stdin)
 
-	for i := 0; i < 999888777; i++ {
+	for {
 		select {
 		case sig := <-sigs:
 			fmt.Println()
@@ -217,22 +207,27 @@ func wrapperContinuous(ctx *cli.Context) {
 			// done <- true
 			return
 		case str := <-input:
-			fmt.Println(str)
-			// parse the string into 2 numbers
-			// run the calculation
-			// print the result with a time unit added
+			fmt.Println(str + I_TU[tu])
+		// parse the string into 2 numbers
+		// run the calculation
+		// print the result with a time unit added
 		default:
 			// Input
 			in := readInput(scanner)
-			// validate
+			// process
 			in = processInput(in, fu, su, tu)
 
 			// send to input channel
 			input <- in // blocking, which is what I want
-			i++
 		}
 	}
 }
+
+// func readInputC(r io.Reader, line chan string) {
+// 	s := bufio.NewScanner(r)
+// 	s.Split(bufio.ScanLines)
+// 	go func() {}
+// }
 
 func readInput(scanner *bufio.Scanner) (s string) {
 	scanner.Scan()
@@ -362,6 +357,7 @@ func processArgs(c *cli.Context) (result string) {
 
 	return result
 }
+
 // Uses TUR to reduce a TU to a second-based u uint64
 func reduceTime(u uint8) (n uint64) {
 	n = 1
