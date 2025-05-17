@@ -114,7 +114,7 @@ const (
 )
 
 const (
-	Version = "v0.5.5"
+	Version = "v0.6.5"
 )
 
 func main() {
@@ -399,7 +399,7 @@ func processArgs(c *cli.Context) (result string) {
 	// }
 
 	// all float, its better
-	result = strconv.FormatFloat(float64(float32(total)/reduceTimeFloat(tu)), 'f', 4, 64)
+	result = strconv.FormatFloat(float64(float32(total)/reduceTimeFloat(tu)), 'f', 4, 64) + I_TU[tu]
 
 	return result
 }
