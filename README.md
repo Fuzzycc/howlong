@@ -27,7 +27,7 @@ The following GIF also demonstrates further usage
 ![Normal](./.example_gifs/normal.gif)
 
 ## Continuous Mode
-Continuous mode is started with the `--continuous` or `-c` flag and supplied with `{unit} {unit} {time-unit}`
+Continuous mode is started with the `--continuous` or `-c` flag and supplied with `{unit} {unit} [time-unit]`
 Then, input is taken in the form of `{down-size} {speed}` and an output is given in the form of `duration` concatted with `time-unit`
 
 ### Example
