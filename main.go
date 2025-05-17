@@ -4,14 +4,11 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
-	"io"
 	"log"
 	"math"
 	"os"
-	"os/signal"
 	"strconv"
 	"strings"
-	"syscall"
 
 	"github.com/urfave/cli/v2"
 )
@@ -172,7 +169,7 @@ VERSION:
 		ArgsUsage: "{size[unit]} {speed[unit]} [time-unit]",
 		Action: func(ctx *cli.Context) error {
 			if ctx.Bool("continuous") {
-				wrapperContinuous(ctx)
+				processContinuous(ctx)
 				return nil
 			} else {
 				r := processArgs(ctx)
@@ -187,126 +184,102 @@ VERSION:
 	}
 }
 
-func wrapperContinuous(ctx *cli.Context) {
-	sigs := make(chan os.Signal, 1)
-	defer close(sigs)
+// Deprecated
+// func readCont(ctx *cli.Context) {
+// 	var fu, su, tu uint8 = processArgsContinuous(ctx)
 
-	q := make(chan bool, 1)
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+// 	scanner := bufio.NewScanner(os.Stdin)
+// 	for scanner.Scan() {
+// 		in := scanner.Text()
+// 		in = processInput(in, fu, su, tu)
+// 		fmt.Println(in + I_TU[tu])
+// 		if err := scanner.Err(); err != nil {
+// 			fmt.Println("howlong: error reading from stdin: ", err)
+// 		}
+// 	}
+// }
 
-	input := make(chan string, 1)
-	defer close(input)
-
+func processContinuous(ctx *cli.Context) {
 	var fu, su, tu uint8 = processArgsContinuous(ctx)
 
-	scanner := bufio.NewReader(os.Stdin)
+	sc := bufio.NewScanner(os.Stdin)
 
-	// go func() {
-	// 	for {
-	// 		select {
-	// 		case sig := <- sigs:
-	// 			fmt.Println("---", sig, "---")
-	// 			return
-	// 			case
-	// 		}
-	// 	}
-	// }()
-
-	// for {
-	// 	in := readInput(scanner)
-	// 	in = processInput(in, fu, su, tu)
-	// 	input <- in
-
-	// 	go func() {
-	// 		select {
-	// 		case sig := <-sigs:
-	// 			fmt.Println()
-	// 			fmt.Println("---", sig, "---")
-	// 			return
-	// 		case str := <-input:
-	// 			fmt.Println(str + I_TU[tu])
-	// 		}
-	// 	}()
-	// }
-
-	go func() {
-		<-sigs
-		fmt.Println("-1")
-		close(q)
-	}()
-
-loop:
-	for {
-		in := readInput(scanner)
-		if in == "" {
-			break loop
-		}
+	for sc.Scan() {
+		in := sc.Text()
 		in = processInput(in, fu, su, tu)
 		fmt.Println(in + I_TU[tu])
 	}
-	select {
-	case <-q:
+
+	err := sc.Err()
+	var errout string
+	switch err {
+	case nil: // nil is EOF
+		errout = "EOF"
+	default:
+		errout = "howlong: error reading from stdin: " + err.Error()
 	}
-
-	// in := readInput(scanner)
-	// in = processInput(in, fu, su, tu)
-	// input <- in
-	// for {
-	// 	select {
-	// 	case sig := <-sigs:
-	// 		fmt.Println()
-	// 		fmt.Println("---", sig, "---")
-	// 		// done <- true
-	// 		return
-	// 	case str := <-input:
-	// 		fmt.Println(str + I_TU[tu])
-	// 		// parse the string into 2 numbers
-	// 		// run the calculation
-	// 		// print the result with a time unit added
-	// 		// default:
-	// 		// 	// Input
-	// 		// 	in := readInput(scanner)
-	// 		// 	// process
-	// 		// 	in = processInput(in, fu, su, tu)
-
-	// 		// 	// send to input channel
-	// 		// 	input <- in // blocking, which is what I want
-	// 	}
-	// 	in := readInput(scanner)
-	// 	in = processInput(in, fu, su, tu)
-	// 	input <- in
-	// }
+	fmt.Println(errout)
+	return
 }
 
-// func readInputC(r io.Reader, line chan string) {
-// 	s := bufio.NewScanner(r)
-// 	s.Split(bufio.ScanLines)
-// 	go func() {}
+// Deprecated
+// func wrapperContinuous(ctx *cli.Context) {
+// 	sigs := make(chan os.Signal, 1)
+// 	defer close(sigs)
+
+// 	q := make(chan bool, 1)
+// 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+
+// 	input := make(chan string, 1)
+// 	defer close(input)
+
+// 	var fu, su, tu uint8 = processArgsContinuous(ctx)
+
+// 	scanner := bufio.NewReader(os.Stdin)
+
+// 	go func() {
+// 		<-sigs
+// 		fmt.Println("-1")
+// 		close(q)
+// 	}()
+
+// loop:
+// 	for {
+// 		in := readInput(scanner)
+// 		if in == "" {
+// 			break loop
+// 		}
+// 		in = processInput(in, fu, su, tu)
+// 		fmt.Println(in + I_TU[tu])
+// 	}
+// 	select {
+// 	case <-q:
+// 	}
 // }
 
-func readInput(scanner *bufio.Reader) (s string) {
-	s, err := scanner.ReadString('\n')
-	if err == io.EOF {
-		return ""
-	}
-	if err != nil {
-		log.Fatal(err)
-	}
-	s = strings.TrimRight(s, "\r\n")
-	// fmt.Println("-", s, "-")
-	return s
-	// return scanner.Text()
-}
+// Deprecated
+// func readInput(scanner *bufio.Reader) (s string) {
+// 	s, err := scanner.ReadString('\n')
+// 	if err == io.EOF {
+// 		return ""
+// 	}
+// 	if err != nil {
+// 		log.Fatal(err)
+// 	}
+// 	s = strings.TrimRight(s, "\r\n")
+// 	// fmt.Println("-", s, "-")
+// 	return s
+// 	// return scanner.Text()
+// }
 
 func processInput(in string, fu uint8, su uint8, tu uint8) (result string) {
 	parts := strings.Split(in, " ")
 	err := func() error {
 		plen := len(parts)
 		switch plen {
-		case 0: // this never happens, len is always minimum of 1, read strings.Split
-			return errors.New("Howlong: Input Validation Error: 0 input, 2 required")
+		// case 0: // this never happens, len is always minimum of 1, read strings.Split
+		// 	return errors.New("Howlong: Input Validation Error: 0 input, 2 required")
 		case 1:
-			fmt.Println(parts)
 			return errors.New("Howlong: Input Validation Error: 1 input, 2 required")
 		case 2:
 			return nil
@@ -320,6 +293,8 @@ func processInput(in string, fu uint8, su uint8, tu uint8) (result string) {
 		log.Fatal(err)
 	}
 
+	// suffixing with unit to make parseSize work
+	// might do a dedicated parser if it's faster
 	a1 := parts[0] + I_SU[fu]
 	a2 := parts[1] + I_SU[su]
 
@@ -328,6 +303,9 @@ func processInput(in string, fu uint8, su uint8, tu uint8) (result string) {
 
 	db := reduceSize(df, fu)
 	sb := reduceSize(sf, su)
+	if sb == 0 {
+		sb = 1
+	}
 
 	total := db / sb
 
@@ -409,6 +387,9 @@ func processArgs(c *cli.Context) (result string) {
 
 	db := reduceSize(df, fu)
 	sb := reduceSize(sf, su)
+	if sb == 0 {
+		sb = 1
+	}
 
 	total := db / sb
 	// result = strconv.FormatUint(total/reduceTime(tu), 10)
@@ -528,7 +509,9 @@ func parseSize(s string) (n float32, u uint8) {
 	f, err := strconv.ParseFloat(s, 32)
 	if err != nil {
 		// fmt.Printf("Error parsing\n")
-		return 0, u
+		log.Fatal("howlong: ", err)
+		// os.Exit(12)
+		// return 0, u
 	}
 	n = float32(f)
 
