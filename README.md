@@ -26,9 +26,13 @@ $hl -c GB KB h
 6.9350h
 >10 369
 7.8933h
--1
+EOF
 ```
-The program will output -1 when terminated.
+The program will output EOF when done.
+
+The following GIFs also demonstrate how you can pipe to the command
+
+
 
 # Help
 hl {down-size[unit]} {speed[unit]} [time-unit]
