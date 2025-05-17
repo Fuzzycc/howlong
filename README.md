@@ -88,7 +88,7 @@ $howlong 120GB 3 d
 ```
 
 # Installation
-Cloning the repository and building with `go install .` is the recommended install method until v1.0
+Cloning the repository and building with `go build .` or `go install .` is the recommended install method until v1.0
 
 # Onwards to 1.0!
 + Input from file (tsv) for --continuous mode
