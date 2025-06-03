@@ -173,7 +173,7 @@ VERSION:
 				return nil
 			} else {
 				r := processArgs(ctx)
-				fmt.Printf("%v", r)
+				fmt.Printf("%v\n", r)
 				return nil
 			}
 		},
