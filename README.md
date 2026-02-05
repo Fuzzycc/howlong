@@ -102,4 +102,3 @@ Cloning the repository and building with `go build .` or `go install .` is the r
 # Afterwords
 The wizard has 104 GigaMana and a casting speed factor of 10 MMps.
 The Fireball has already been cast and I have been utterly annihi---
-Primeagen coconut oil when?
